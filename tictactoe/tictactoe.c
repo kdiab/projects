@@ -65,7 +65,7 @@ bool validInput(int p){
 	}
 }
 
-int playerInput(char *a){
+void playerInput(char *a){
 	int input;
 	if (a[0] == 'x'){
 		printf("Player 1, enter a number: ");
