@@ -1,3 +1,5 @@
+// THIS PROJECT IS BASED ON KILO
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <termios.h>
@@ -9,9 +11,13 @@
 void handleExit();
 #define CTRL_KEY(k) ((k) & 0x1f)
 
-/*** data stream ***/
+/*** global state ***/
 
-struct termios original_termios;
+struct editorConfig {
+	struct termios term;
+};
+
+struct editorConfig E;
 
 /*** terminal ***/
 
@@ -22,14 +28,14 @@ void die(const char *s){
 }
 
 void disableRawMode(){
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios) == -1) die("tcsetattr, error disabling raw mode");
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.term) == -1) die("tcsetattr, error disabling raw mode");
 }
 
 void enableRawMode(){
-	if (tcgetattr(STDIN_FILENO, &original_termios) == -1) die("tcgetattr, turning on raw mode");
+	if (tcgetattr(STDIN_FILENO, &E.term) == -1) die("tcgetattr, turning on raw mode");
 	atexit(disableRawMode);
 
-	struct termios raw = original_termios;
+	struct termios raw = E.term;
 	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
 	raw.c_oflag &= ~(OPOST);
 	raw.c_cflag |= (CS8);
