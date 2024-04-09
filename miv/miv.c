@@ -17,6 +17,7 @@ void handleExit();
 /*** global state ***/
 
 struct editorConfig {
+	int cx, cy;
 	int screenrows;
 	int screencols;
 	struct termios term;
@@ -113,12 +114,35 @@ void freebuffer(struct abuf *ab) {
 
 /*** input ***/
 
+void moveCursor(char key) {
+	switch(key) {
+		case 'a':
+			E.cx--;
+			break;
+		case 'd':
+			E.cx++;
+			break;
+		case 'w':
+			E.cy--;
+			break;
+		case 's':
+			E.cy++;
+			break;
+	}
+}
+
 void processKeys() {
 	char c = readKey();
 	switch(c) {
 		case CTRL_KEY('q'):
 			handleExit();
 			exit(0);
+			break;
+		case 'w':
+		case 's':
+		case 'a':
+		case 'd':
+			moveCursor(c);
 			break;
 	}
 }
@@ -161,7 +185,11 @@ void refreshScreen() {
 	appendbuffer(&ab, "\x1b[H", 3);
 
 	drawRows(&ab);
-	appendbuffer(&ab, "\x1b[H", 3);
+	
+	char buf[32];
+	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+	appendbuffer(&ab, buf, strlen(buf));
+
 	appendbuffer(&ab, "\x1b[?25h", 6);
 
 	write(STDOUT_FILENO, ab.b, ab.len);
@@ -171,6 +199,9 @@ void refreshScreen() {
 /*** init and main loop ***/
 
 void init() {
+	E.cx = 0;
+	E.cy = 0;
+
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
 }
 
