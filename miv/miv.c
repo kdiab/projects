@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/ioctl.h>
+#include <string.h>
 
 /*** defines ***/
 void handleExit();
@@ -24,17 +25,17 @@ struct editorConfig E;
 
 /*** terminal ***/
 
-void die(const char *s){
+void die(const char *s) {
 	handleExit();
 	perror(s);
 	exit(1);
 }
 
-void disableRawMode(){
+void disableRawMode() {
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.term) == -1) die("tcsetattr, error disabling raw mode");
 }
 
-void enableRawMode(){
+void enableRawMode() {
 	if (tcgetattr(STDIN_FILENO, &E.term) == -1) die("tcgetattr, turning on raw mode");
 	atexit(disableRawMode);
 
@@ -48,7 +49,7 @@ void enableRawMode(){
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr, turning on raw mode");
 }
 
-char readKey(){
+char readKey() {
 	int nread;
 	char c;
 	while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
@@ -73,7 +74,7 @@ int getCursorPosition(int *rows, int *cols) {
 	return 0;
 }
 
-int getWindowSize(int *rows, int *cols){
+int getWindowSize(int *rows, int *cols) {
 	struct winsize ws;
 
 	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
@@ -86,9 +87,32 @@ int getWindowSize(int *rows, int *cols){
 	}
 }
 
+/*** append buffer ***/
+
+struct abuf {
+	char *b;
+	int len;
+};
+
+#define ABUF_INIT {NULL, 0}
+
+void appendbuffer(struct abuf *ab, const char *s, int len) {
+	char *new = realloc(ab->b, ab->len + len);
+
+	if (new == NULL) return;
+	memcpy (&new[ab->len], s, len);
+	ab->b = new;
+	ab->len += len;
+}
+
+void freebuffer(struct abuf *ab) {
+	free(ab->b);
+}
+
+
 /*** input ***/
 
-void processKeys(){
+void processKeys() {
 	char c = readKey();
 	switch(c) {
 		case CTRL_KEY('q'):
@@ -100,28 +124,35 @@ void processKeys(){
 
 /*** output ***/
 
-void handleExit(){
+void handleExit() {
 	write(STDOUT_FILENO, "\x1b[2J", 4);
 	write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
-void drawRows(){
+void drawRows(struct abuf *ab) {
 	int y;
 	for (y = 0; y < E.screenrows; y++) {
-		write (STDOUT_FILENO, "~", 1);
+		appendbuffer(ab, "~", 1);
 		
+		appendbuffer(ab, "\x1b[K", 3);
 		if (y < E.screenrows - 1) {
-			write (STDOUT_FILENO, "\r\n", 2);
+			appendbuffer(ab, "\r\n", 2);
 		}
 	}
 }
 
-void refreshScreen(){
-	write(STDOUT_FILENO, "\x1b[2J", 4);
-	write(STDOUT_FILENO, "\x1b[H", 3);
+void refreshScreen() {
+	struct abuf ab = ABUF_INIT;
 
-	drawRows();
-	write(STDOUT_FILENO, "\x1b[H", 3);
+	appendbuffer(&ab, "\x1b[?25l", 6);
+	appendbuffer(&ab, "\x1b[H", 3);
+
+	drawRows(&ab);
+	appendbuffer(&ab, "\x1b[H", 3);
+	appendbuffer(&ab, "\x1b[?25h", 6);
+
+	write(STDOUT_FILENO, ab.b, ab.len);
+	freebuffer(&ab);
 }
 
 /*** init and main loop ***/
@@ -134,7 +165,7 @@ int main() {
 	enableRawMode();
 	init();
 
-	while (1){
+	while (1) {
 		refreshScreen();
 		processKeys();
 	}
