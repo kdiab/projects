@@ -58,11 +58,18 @@ void processKeys(){
 	}
 }
 
+/*** output ***/
+void refreshScreen(){
+	write(STDOUT_FILENO, "\x1b[2J", 4);
+	write(STDOUT_FILENO, "\x1b[H", 3);
+}
+
 /*** init and main loop ***/
 
 int main() {
 	enableRawMode();
 	while (1){
+		refreshScreen();
 		processKeys();
 	}
 	return 0;
