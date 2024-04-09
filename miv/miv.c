@@ -6,7 +6,7 @@
 #include <ctype.h>
 
 /*** defines ***/
-
+void handleExit();
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 /*** data stream ***/
@@ -16,6 +16,7 @@ struct termios original_termios;
 /*** terminal ***/
 
 void die(const char *s){
+	handleExit();
 	perror(s);
 	exit(1);
 }
@@ -53,14 +54,31 @@ void processKeys(){
 	char c = readKey();
 	switch(c) {
 		case CTRL_KEY('q'):
+			handleExit();
 			exit(0);
 			break;
 	}
 }
 
 /*** output ***/
+
+void handleExit(){
+	write(STDOUT_FILENO, "\x1b[2J", 4);
+	write(STDOUT_FILENO, "\x1b[H", 3);
+}
+
+void drawRows(){
+	int y;
+	for (y = 0; y < 24; y++) {
+		write (STDOUT_FILENO, "~\r\n", 3);
+	}
+}
+
 void refreshScreen(){
 	write(STDOUT_FILENO, "\x1b[2J", 4);
+	write(STDOUT_FILENO, "\x1b[H", 3);
+
+	drawRows();
 	write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
