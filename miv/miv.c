@@ -12,6 +12,7 @@
 /*** defines ***/
 void handleExit();
 #define CTRL_KEY(k) ((k) & 0x1f)
+#define MIV_VERSION "0.0.1"
 
 /*** global state ***/
 
@@ -132,8 +133,20 @@ void handleExit() {
 void drawRows(struct abuf *ab) {
 	int y;
 	for (y = 0; y < E.screenrows; y++) {
-		appendbuffer(ab, "~", 1);
-		
+		if (y == E.screenrows / 3) {
+			char welcome[80];
+			int welcomelen = snprintf(welcome, sizeof(welcome), "MIV editor, it's VIM backwards -- version %s", MIV_VERSION);
+			if (welcomelen > E.screencols) welcomelen = E.screencols;
+			int padding = (E.screencols - welcomelen) / 2;
+			if (padding) {
+				appendbuffer(ab, "~", 1);
+				padding--;
+			}
+			while (padding--) appendbuffer(ab, " ", 1);
+			appendbuffer(ab, welcome, welcomelen);
+		} else {
+			appendbuffer(ab, "~", 1);
+		}
 		appendbuffer(ab, "\x1b[K", 3);
 		if (y < E.screenrows - 1) {
 			appendbuffer(ab, "\r\n", 2);
