@@ -21,8 +21,7 @@ void die(const char *s){
 }
 
 void disableRawMode(){
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios) == -1);
-		die("tcsetattr, error disabling raw mode");
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios) == -1) die("tcsetattr, error disabling raw mode");
 }
 
 void enableRawMode(){
