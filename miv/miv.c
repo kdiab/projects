@@ -133,15 +133,26 @@ int getWindowSize(int *rows, int *cols) {
 
 /*** file io ***/
 
-void open() {
-	char *line = "Hello, World!";
-	ssize_t linelength = 13;
+void open(char *filename) {
+	FILE *fp = fopen(filename, "r");
+	if (!fp) die("fopen fail"); //maybe print help at somepoint
 
-	E.row.size = linelength;
-	E.row.chars = malloc (linelength + 1);
-	memcpy(E.row.chars, line, linelength);
-	E.row.chars[linelength] = '\0';
-	E.numrows = 1;
+	char *line = NULL;
+	size_t linecap = 0;
+	ssize_t linelength;
+	linelength = getline(&line, &linecap, fp);
+	if(linelength != -1) {
+		while (linelength > 0 && (line[linelength - 1] == '\n' || 
+					line[linelength - 1] == '\r'))
+			linelength--;
+		E.row.size = linelength;
+		E.row.chars = malloc (linelength + 1);
+		memcpy(E.row.chars, line, linelength);
+		E.row.chars[linelength] = '\0';
+		E.numrows = 1;
+	}
+	free(line);
+	fclose(fp);
 }
 
 /*** append buffer ***/
@@ -284,10 +295,12 @@ void init() {
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 	enableRawMode();
 	init();
-	open();
+	if (argc >= 2) {
+		open(argv[1]);
+	}
 
 	while (1) {
 		refreshScreen();
