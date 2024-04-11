@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <sys/types.h>
 
 /*** defines ***/
 void handleExit();
@@ -25,10 +26,17 @@ enum keymap {
 
 /*** global state ***/
 
+typedef struct trow {
+	int size;
+	char *chars;
+} trow;
+
 struct editorConfig {
 	int cx, cy;
 	int screenrows;
 	int screencols;
+	int numrows;
+	trow row;
 	struct termios term;
 };
 
@@ -123,6 +131,19 @@ int getWindowSize(int *rows, int *cols) {
 	}
 }
 
+/*** file io ***/
+
+void open() {
+	char *line = "Hello, World!";
+	ssize_t linelength = 13;
+
+	E.row.size = linelength;
+	E.row.chars = malloc (linelength + 1);
+	memcpy(E.row.chars, line, linelength);
+	E.row.chars[linelength] = '\0';
+	E.numrows = 1;
+}
+
 /*** append buffer ***/
 
 struct abuf {
@@ -208,7 +229,8 @@ void handleExit() {
 void drawRows(struct abuf *ab) {
 	int y;
 	for (y = 0; y < E.screenrows; y++) {
-		if (y == E.screenrows / 3) {
+		if (y >= E.numrows) {
+		if (y == E.screenrows / 3 && E.numrows == 0) {
 			char welcome[80];
 			int welcomelen = snprintf(welcome, sizeof(welcome), "MIV editor, it's VIM backwards -- version %s", MIV_VERSION);
 			if (welcomelen > E.screencols) welcomelen = E.screencols;
@@ -221,6 +243,11 @@ void drawRows(struct abuf *ab) {
 			appendbuffer(ab, welcome, welcomelen);
 		} else {
 			appendbuffer(ab, "~", 1);
+		}
+		} else {
+			int len = E.row.size;
+			if (len > E.screencols) len = E.screencols;
+			appendbuffer(ab, E.row.chars, len);
 		}
 		appendbuffer(ab, "\x1b[K", 3);
 		if (y < E.screenrows - 1) {
@@ -252,6 +279,7 @@ void refreshScreen() {
 void init() {
 	E.cx = 0;
 	E.cy = 0;
+	E.numrows = 0;
 
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
 }
@@ -259,6 +287,7 @@ void init() {
 int main() {
 	enableRawMode();
 	init();
+	open();
 
 	while (1) {
 		refreshScreen();
