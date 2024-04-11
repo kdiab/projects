@@ -1,5 +1,9 @@
 // THIS PROJECT IS BASED ON KILO
 
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <termios.h>
