@@ -291,6 +291,14 @@ void processKeys() {
 			break;
 		case PAGE_UP:
 		case PAGE_DOWN:
+			if (c == PAGE_UP) {
+				E.cy = E.rowoffset;
+			}
+			else if (c == PAGE_DOWN) {
+				E.cy = E.rowoffset + E.screenrows - 1;
+				if (E.cy > E.numrows) E.cy = E.numrows;
+			}
+
 			{
 				int times = E.screenrows;
 				while (times --)
