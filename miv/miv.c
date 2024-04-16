@@ -12,6 +12,8 @@
 #include <ctype.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <time.h>
+#include <stdarg.h>
 #include <sys/types.h>
 
 /*** defines ***/
@@ -48,6 +50,8 @@ struct editorConfig {
 	int numrows;
 	trow *row;
 	char *filename;
+	char statusmsg[80];
+	time_t statusmsg_time;
 	struct termios term;
 };
 
@@ -393,6 +397,15 @@ void drawStatusBar(struct abuf *ab) {
 	appendbuffer(ab, "\x1b[m", 3);
 }
 
+void drawMessageBar(struct abuf *ab) {
+	appendbuffer(ab, "\x1b[K", 3);
+	int msglen = strlen(E.statusmsg);
+	if (msglen > E.screencols) msglen = E.screencols;
+	if (msglen && time(NULL) - E.statusmsg_time < 5)
+		appendbuffer(ab, E.statusmsg, msglen);
+}
+
+
 void refreshScreen() {
 	scroll();
 
@@ -403,6 +416,7 @@ void refreshScreen() {
 
 	drawRows(&ab);
 	drawStatusBar(&ab);
+	drawMessageBar(&ab);
 	
 	char buf[32];
 	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoffset) + 1, (E.rx - E.coloffset) + 1);
@@ -412,6 +426,14 @@ void refreshScreen() {
 
 	write(STDOUT_FILENO, ab.b, ab.len);
 	freebuffer(&ab);
+}
+
+void setStatusMessage(const char *fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(E.statusmsg, sizeof(E.statusmsg), fmt, ap);
+	va_end(ap);
+	E.statusmsg_time = time(NULL);
 }
 
 /*** init and main loop ***/
@@ -425,9 +447,11 @@ void init() {
 	E.coloffset = 0;
 	E.row = NULL;
 	E.filename = NULL;
+	E.statusmsg[0] = '\0';
+	E.statusmsg_time = 0;
 
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
-	E.screenrows -= 1;
+	E.screenrows -= 2;
 }
 
 int main(int argc, char *argv[]) {
@@ -436,6 +460,8 @@ int main(int argc, char *argv[]) {
 	if (argc >= 2) {
 		open(argv[1]);
 	}
+
+	setStatusMessage("HELP: Ctrl-Q to quit");
 
 	while (1) {
 		refreshScreen();
