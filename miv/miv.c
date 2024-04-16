@@ -47,6 +47,7 @@ struct editorConfig {
 	int screencols;
 	int numrows;
 	trow *row;
+	char *filename;
 	struct termios term;
 };
 
@@ -194,6 +195,9 @@ void appendRow(char *s, size_t len){
 /*** file io ***/
 
 void open(char *filename) {
+	free(E.filename);
+	E.filename = strdup(filename);
+
 	FILE *fp = fopen(filename, "r");
 	if (!fp) die("fopen fail"); //maybe print help at somepoint
 
@@ -363,10 +367,18 @@ void drawRows(struct abuf *ab) {
 			appendbuffer(ab, &E.row[filerow].render[E.coloffset], len);
 		}
 		appendbuffer(ab, "\x1b[K", 3);
-		if (y < E.screenrows - 1) {
-			appendbuffer(ab, "\r\n", 2);
-		}
+		appendbuffer(ab, "\r\n", 2);
 	}
+}
+
+void drawStatusBar(struct abuf *ab) {
+	appendbuffer(ab,"\x1b[7m", 4);
+	int len = 0;
+	while (len < E.screencols) {
+		appendbuffer(ab, " ", 1);
+		len++;
+	}
+	appendbuffer(ab, "\x1b[m", 3);
 }
 
 void refreshScreen() {
@@ -378,6 +390,7 @@ void refreshScreen() {
 	appendbuffer(&ab, "\x1b[H", 3);
 
 	drawRows(&ab);
+	drawStatusBar(&ab);
 	
 	char buf[32];
 	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoffset) + 1, (E.rx - E.coloffset) + 1);
@@ -399,8 +412,10 @@ void init() {
 	E.rowoffset = 0;
 	E.coloffset = 0;
 	E.row = NULL;
+	E.filename = NULL;
 
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
+	E.screenrows -= 1;
 }
 
 int main(int argc, char *argv[]) {
