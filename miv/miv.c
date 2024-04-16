@@ -373,10 +373,22 @@ void drawRows(struct abuf *ab) {
 
 void drawStatusBar(struct abuf *ab) {
 	appendbuffer(ab,"\x1b[7m", 4);
-	int len = 0;
+	
+	char status[80], rstatus[80];
+	int len = snprintf(status, sizeof(status), "%.20s - %d lines", E.filename ? E.filename : "[Unnamed File]", E.numrows);
+	int rlen = snprintf(rstatus, sizeof(rstatus), "%d/%d", E.cy + 1, E.numrows);
+
+	if (len > E.screencols) len = E.screencols;
+	appendbuffer(ab, status, len);
+
 	while (len < E.screencols) {
-		appendbuffer(ab, " ", 1);
-		len++;
+		if (E.screencols - len == rlen) {
+			appendbuffer(ab, rstatus, rlen);
+			break;
+		} else {
+			appendbuffer(ab, " ", 1);
+			len++;
+		}
 	}
 	appendbuffer(ab, "\x1b[m", 3);
 }
