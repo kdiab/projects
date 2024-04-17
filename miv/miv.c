@@ -23,6 +23,7 @@ void handleExit();
 #define MIV_TAB_STOP 8
 
 enum keymap {
+	BACKSPACE = 127,
 	ARROW_LEFT = 1000,
 	ARROW_RIGHT,
 	ARROW_UP,
@@ -305,6 +306,9 @@ void moveCursor(int key) {
 void processKeys() {
 	int c = readKey();
 	switch(c) {
+		case '\r':
+			// handle \r
+			break;
 		case CTRL_KEY('q'):
 			handleExit();
 			exit(0);
@@ -314,6 +318,16 @@ void processKeys() {
 		case ARROW_RIGHT:
 		case ARROW_LEFT:
 			moveCursor(c);
+			break;
+		
+		case CTRL_KEY('l'):
+		case '\x1b':
+			break;
+
+		case BACKSPACE:
+		case CTRL_KEY('h'):
+		case DEL_KEY:
+			//handle delete
 			break;
 		case PAGE_UP:
 		case PAGE_DOWN:
