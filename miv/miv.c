@@ -5,6 +5,7 @@
 #define _GNU_SOURCE
 
 #include <stdlib.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
 #include <errno.h>
@@ -28,6 +29,7 @@ enum keymap {
 	ARROW_RIGHT,
 	ARROW_UP,
 	ARROW_DOWN,
+	DEL_KEY,
 	PAGE_UP,
 	PAGE_DOWN
 };
@@ -217,7 +219,24 @@ void insertChar(int c) {
 
 /*** file io ***/
 
-void open(char *filename) {
+char *rowsToString(int *buflen){
+	int total_len = 0;
+	int j;
+	for (j = 0; j < E.numrows; j++)
+		total_len += E.row[j].size + 1;
+	*buflen = total_len;
+	char *buf = malloc(total_len);
+	char *p = buf;
+	for (j = 0; j < E.numrows; j++) {
+		memcpy(p, E.row[j].chars, E.row[j].size);
+		p += E.row[j].size;
+		*p = '\n';
+		p++;
+	}
+	return buf;
+}
+
+void Open(char *filename) {
 	free(E.filename);
 	E.filename = strdup(filename);
 
@@ -235,6 +254,19 @@ void open(char *filename) {
 	}
 	free(line);
 	fclose(fp);
+}
+
+void save() {
+	if (E.filename == NULL) return;
+
+	int len;
+	char *buf = rowsToString(&len);
+
+	int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
+	ftruncate(fd, len);
+	write(fd, buf,len);
+	close(fd);
+	free(buf);
 }
 
 /*** append buffer ***/
@@ -313,6 +345,11 @@ void processKeys() {
 			handleExit();
 			exit(0);
 			break;
+		
+		case CTRL_KEY('s'):
+			save();
+			break;
+
 		case ARROW_UP:
 		case ARROW_DOWN:
 		case ARROW_RIGHT:
@@ -493,7 +530,7 @@ int main(int argc, char *argv[]) {
 	enableRawMode();
 	init();
 	if (argc >= 2) {
-		open(argv[1]);
+		Open(argv[1]);
 	}
 
 	setStatusMessage("HELP: Ctrl-Q to quit");
