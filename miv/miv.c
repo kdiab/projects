@@ -60,6 +60,10 @@ struct editorConfig {
 
 struct editorConfig E;
 
+/*** prototypes ***/
+
+void setStatusMessage(const char *fmt, ...);
+
 /*** terminal ***/
 
 void die(const char *s) {
@@ -217,6 +221,7 @@ void insertChar(int c) {
 	E.cx++;
 }
 
+
 /*** file io ***/
 
 char *rowsToString(int *buflen){
@@ -263,10 +268,19 @@ void save() {
 	char *buf = rowsToString(&len);
 
 	int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
-	ftruncate(fd, len);
-	write(fd, buf,len);
-	close(fd);
+	if (fd != -1) {
+		if (ftruncate(fd, len) != -1) {
+			if (write(fd, buf,len) == len) {
+				close(fd);
+				free(buf);
+				setStatusMessage("%d bytes written to disk", len);
+				return;
+			}
+		}
+		close(fd);
+	}
 	free(buf);
+	setStatusMessage("Can't save file, I/O error: %s", strerror(errno));
 }
 
 /*** append buffer ***/
@@ -533,7 +547,7 @@ int main(int argc, char *argv[]) {
 		Open(argv[1]);
 	}
 
-	setStatusMessage("HELP: Ctrl-Q to quit");
+	setStatusMessage("HELP: Ctrl-Q to quit | Ctrl-S to Save");
 
 	while (1) {
 		refreshScreen();
