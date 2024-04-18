@@ -49,6 +49,7 @@ struct editorConfig {
 	int rowoffset;
 	int coloffset;
 	int screenrows;
+	int dirty;
 	int screencols;
 	int numrows;
 	trow *row;
@@ -200,6 +201,7 @@ void appendRow(char *s, size_t len){
 	updateRow(&E.row[at]);
 
 	E.numrows++;
+	E.dirty++;
 }
 
 void moveRowChars(trow *row, int at, int c) {
@@ -209,6 +211,7 @@ void moveRowChars(trow *row, int at, int c) {
 	row->size++;
 	row->chars[at] = c;
 	updateRow(row);
+	E.dirty++;
 }
 
 /*** editor operations ***/
@@ -259,6 +262,7 @@ void Open(char *filename) {
 	}
 	free(line);
 	fclose(fp);
+	E.dirty = 0;
 }
 
 void save() {
@@ -281,6 +285,7 @@ void save() {
 	}
 	free(buf);
 	setStatusMessage("Can't save file, I/O error: %s", strerror(errno));
+	E.dirty = 0;
 }
 
 /*** append buffer ***/
@@ -465,7 +470,7 @@ void drawStatusBar(struct abuf *ab) {
 	appendbuffer(ab,"\x1b[7m", 4);
 	
 	char status[80], rstatus[80];
-	int len = snprintf(status, sizeof(status), "%.20s - %d lines", E.filename ? E.filename : "[Unnamed File]", E.numrows);
+	int len = snprintf(status, sizeof(status), "%.20s - %d lines %s", E.filename ? E.filename : "[Unnamed File]", E.numrows, E.dirty ? "(File Modified)" : "");
 	int rlen = snprintf(rstatus, sizeof(rstatus), "%d/%d", E.cy + 1, E.numrows);
 
 	if (len > E.screencols) len = E.screencols;
@@ -531,6 +536,7 @@ void init() {
 	E.numrows = 0;
 	E.rowoffset = 0;
 	E.coloffset = 0;
+	E.dirty = 0;
 	E.row = NULL;
 	E.filename = NULL;
 	E.statusmsg[0] = '\0';
