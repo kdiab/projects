@@ -22,6 +22,7 @@ void handleExit();
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define MIV_VERSION "0.0.1"
 #define MIV_TAB_STOP 8
+#define MIV_QUIT 1
 
 enum keymap {
 	BACKSPACE = 127,
@@ -277,6 +278,7 @@ void save() {
 			if (write(fd, buf,len) == len) {
 				close(fd);
 				free(buf);
+				E.dirty = 0;
 				setStatusMessage("%d bytes written to disk", len);
 				return;
 			}
@@ -285,7 +287,6 @@ void save() {
 	}
 	free(buf);
 	setStatusMessage("Can't save file, I/O error: %s", strerror(errno));
-	E.dirty = 0;
 }
 
 /*** append buffer ***/
@@ -355,12 +356,19 @@ void moveCursor(int key) {
 }
 
 void processKeys() {
+	static int quit_times = MIV_QUIT;
+
 	int c = readKey();
 	switch(c) {
 		case '\r':
 			// handle \r
 			break;
 		case CTRL_KEY('q'):
+			if (E.dirty && quit_times > 0) {
+				setStatusMessage("WARNING!!! File has unsaved changes. Press Ctrl-Q %d more times to quit without saving.", quit_times);
+				quit_times--;
+				return;
+			}
 			handleExit();
 			exit(0);
 			break;
@@ -406,6 +414,7 @@ void processKeys() {
 			insertChar(c);
 			break;
 	}
+	quit_times = MIV_QUIT;
 }
 
 /*** output ***/
