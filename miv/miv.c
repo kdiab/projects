@@ -215,6 +215,14 @@ void moveRowChars(trow *row, int at, int c) {
 	E.dirty++;
 }
 
+void delRowChar(trow *row, int at) {
+	if (at < 0 || at >= row->size) return;
+	memmove(&row->chars[at], &row->chars[at + 1], row->size - at);
+	row->size--;
+	updateRow(row);
+	E.dirty++;
+}
+
 /*** editor operations ***/
 
 void insertChar(int c) { 
@@ -225,6 +233,14 @@ void insertChar(int c) {
 	E.cx++;
 }
 
+void delChar() {
+	if (E.cy == E.numrows) return;
+	trow *row = &E.row[E.cy];
+	if (E.cx > 0) {
+		delRowChar(row, E.cx - 1);
+		E.cx--;
+	}
+}
 
 /*** file io ***/
 
@@ -391,7 +407,8 @@ void processKeys() {
 		case BACKSPACE:
 		case CTRL_KEY('h'):
 		case DEL_KEY:
-			//handle delete
+			if (c == DEL_KEY) moveCursor(ARROW_RIGHT);
+			delChar();
 			break;
 		case PAGE_UP:
 		case PAGE_DOWN:
