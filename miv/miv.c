@@ -205,12 +205,34 @@ void appendRow(char *s, size_t len){
 	E.dirty++;
 }
 
+void freeRow(trow *row) {
+	free(row->render);
+	free(row->chars);
+}
+
+void delRow(int at) {
+	if (at < 0 || at >= E.numrows) return;
+	freeRow(&E.row[at]);
+	memmove(&E.row[at], &E.row[at + 1], sizeof(trow) * (E.numrows - at - 1));
+	E.numrows--;
+	E.dirty++;
+}
+
 void moveRowChars(trow *row, int at, int c) {
 	if (at < 0 || at > row->size) at = row->size;
 	row->chars = realloc(row->chars, row->size + 2);
 	memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
 	row->size++;
 	row->chars[at] = c;
+	updateRow(row);
+	E.dirty++;
+}
+
+void appendRowString(trow *row, char *s, size_t len) {
+	row->chars = realloc(row->chars, row->size + len + 1);
+	memcpy(&row->chars[row->size], s, len);
+	row->size += len;
+	row->chars[row->size] = '\0';
 	updateRow(row);
 	E.dirty++;
 }
@@ -235,10 +257,17 @@ void insertChar(int c) {
 
 void delChar() {
 	if (E.cy == E.numrows) return;
+	if (E.cx == 0 && E.cy == 0) return;
+
 	trow *row = &E.row[E.cy];
 	if (E.cx > 0) {
 		delRowChar(row, E.cx - 1);
 		E.cx--;
+	} else {
+		E.cx = E.row[E.cy - 1].size;
+		appendRowString(&E.row[E.cy - 1], row->chars, row->size);
+		delRow(E.cy);
+		E.cy--;
 	}
 }
 
