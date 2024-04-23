@@ -188,10 +188,11 @@ void updateRow(trow *row){
 	row->rsize = idx;
 }
 
-void appendRow(char *s, size_t len){
+void insertRow(int at, char *s, size_t len){
+	if (at < 0 || at > E.numrows) return;
 	E.row = realloc(E.row, sizeof(trow) * (E.numrows + 1));
-	
-	int at = E.numrows;
+	memmove(&E.row[at + 1], &E.row[at], sizeof(trow) * (E.numrows - at));
+
 	E.row[at].size = len;
 	E.row[at].chars = malloc (len + 1);
 	memcpy(E.row[at].chars, s, len);
@@ -249,10 +250,25 @@ void delRowChar(trow *row, int at) {
 
 void insertChar(int c) { 
 	if (E.cy == E.numrows) {
-		appendRow("", 0);
+		insertRow(E.numrows, "", 0);
 	}
 	moveRowChars(&E.row[E.cy], E.cx, c);
 	E.cx++;
+}
+
+void insertNewLine() {
+	if (E.cx == 0) {
+		insertRow(E.cy, "", 0);
+	} else { 
+		trow *row = &E.row[E.cy];
+		insertRow(E.cy + 1, &row->chars[E.cx], row->size - E.cx);
+		row = &E.row[E.cy];
+		row->size = E.cx;
+		row->chars[row->size] = '\0';
+		updateRow(row);
+	}
+	E.cy++;
+	E.cx = 0;
 }
 
 void delChar() {
@@ -304,7 +320,7 @@ void Open(char *filename) {
 		while (linelength > 0 && (line[linelength - 1] == '\n' || 
 					line[linelength - 1] == '\r'))
 			linelength--;
-		appendRow(line, linelength);
+		insertRow(E.numrows, line, linelength);
 	}
 	free(line);
 	fclose(fp);
@@ -406,7 +422,7 @@ void processKeys() {
 	int c = readKey();
 	switch(c) {
 		case '\r':
-			// handle \r
+			insertNewLine();
 			break;
 		case CTRL_KEY('q'):
 			if (E.dirty && quit_times > 0) {
