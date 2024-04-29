@@ -170,6 +170,18 @@ int cxtorx(trow *row, int cx){
 	return rx;
 }
 
+int rxtocx(trow *row, int rx) {
+	int cur_rx = 0;
+	int cx;
+	for (cx = 0; cx < row->size; cx++) {
+		if (row->chars[cx] == '\t')
+			cur_rx += (MIV_TAB_STOP - 1) - (cur_rx % MIV_TAB_STOP);
+		cur_rx++;
+		if (cur_rx > rx) return cx;
+	}
+	return cx;
+}
+
 void updateRow(trow *row){
 	int tabs = 0;
 	int j;
@@ -358,6 +370,26 @@ void save() {
 	setStatusMessage("Can't save file, I/O error: %s", strerror(errno));
 }
 
+/*** find / search ***/
+
+void find() {
+	char *query = promptUser("Search: %s (ESC to Cancel)");
+	if (query == NULL) return;
+
+	int i;
+	for (i = 0; i < E.numrows; i++) {
+		trow *row = &E.row[i];
+		char *match = strstr(row->render, query);
+		if (match) {
+			E.cy = i;
+			E.cx = rxtocx(row, match - row->render);
+			E.rowoffset = E.numrows;
+			break;
+		}
+	}
+	free(query);
+}
+
 /*** append buffer ***/
 
 struct abuf {
@@ -489,7 +521,9 @@ void processKeys() {
 		case CTRL_KEY('l'):
 		case '\x1b':
 			break;
-
+		case CTRL_KEY('f'):
+			find();
+			break;
 		case BACKSPACE:
 		case CTRL_KEY('h'):
 		case DEL_KEY:
@@ -665,7 +699,7 @@ int main(int argc, char *argv[]) {
 		Open(argv[1]);
 	}
 
-	setStatusMessage("HELP: Ctrl-Q to quit | Ctrl-S to Save");
+	setStatusMessage("HELP: Ctrl-Q to quit | Ctrl-S to Save | Ctrl-F = find");
 
 	while (1) {
 		refreshScreen();
