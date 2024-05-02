@@ -66,7 +66,7 @@ struct editorConfig E;
 
 void setStatusMessage(const char *fmt, ...);
 void refreshScreen();
-char *promptUser(char *prompt);
+char *promptUser(char *prompt, void (*callback)(char *, int));
 
 /*** terminal ***/
 
@@ -343,7 +343,7 @@ void Open(char *filename) {
 
 void save() {
 	if (E.filename == NULL) {
-		E.filename = promptUser("Save as: %s (ESC to cancel)");
+		E.filename = promptUser("Save as: %s (ESC to cancel)", NULL);
 		if (E.filename == NULL) {
 			setStatusMessage("Save aborted");
 			return;
@@ -372,10 +372,10 @@ void save() {
 
 /*** find / search ***/
 
-void find() {
-	char *query = promptUser("Search: %s (ESC to Cancel)");
-	if (query == NULL) return;
-
+void findCallback(char *query, int key) {
+	if (key == '\r' || key == '\x1b') {
+		return;
+	}
 	int i;
 	for (i = 0; i < E.numrows; i++) {
 		trow *row = &E.row[i];
@@ -387,7 +387,14 @@ void find() {
 			break;
 		}
 	}
-	free(query);
+}
+
+void find() {
+	char *query = promptUser("Search: %s (ESC to Cancel)", findCallback);
+
+	if (query) {	
+		free(query);
+	}
 }
 
 /*** append buffer ***/
@@ -415,7 +422,7 @@ void freebuffer(struct abuf *ab) {
 
 /*** input ***/
 
-char *promptUser(char *prompt) {
+char *promptUser(char *prompt, void (*callback)(char *, int)) {
 	size_t bufsize = 128;
 	char *buf = malloc(bufsize);
 
@@ -430,11 +437,13 @@ char *promptUser(char *prompt) {
 			if (buflen != 0) buf[--buflen] = '\0';
 		} else if (c == '\x1b') {
 			setStatusMessage("");
+			if (callback) callback(buf, c);
 			free(buf);
 			return NULL;
 		} else if (c == '\r') {
 			if (buflen != 0) {
 				setStatusMessage("");
+				if (callback) callback(buf, c);
 				return buf;
 			}
 		} else if (!iscntrl(c) && c < 128) {
@@ -445,6 +454,7 @@ char *promptUser(char *prompt) {
 			buf[buflen++] = c;
 			buf[buflen] = '\0';
 		}
+		if (callback) callback(buf, c);
 	}
 }
 
