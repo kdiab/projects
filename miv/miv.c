@@ -390,10 +390,20 @@ void findCallback(char *query, int key) {
 }
 
 void find() {
+	int saved_cx = E.cx;
+	int saved_cy = E.cy;
+	int saved_coloff = E.coloffset;
+	int saved_rowoff = E.rowoffset;
+
 	char *query = promptUser("Search: %s (ESC to Cancel)", findCallback);
 
 	if (query) {	
 		free(query);
+	} else {
+		E.cx = saved_cx;
+		E.cy = saved_cy;
+		E.coloffset = saved_coloff;
+		E.rowoffset = saved_rowoff;
 	}
 }
 
