@@ -647,7 +647,18 @@ void drawRows(struct abuf *ab) {
 			int len = E.row[filerow].rsize - E.coloffset;
 			if (len < 0) len = 0; 
 			if (len > E.screencols) len = E.screencols;
-			appendbuffer(ab, &E.row[filerow].render[E.coloffset], len);
+			char *c = &E.row[filerow].render[E.coloffset];
+			int j;
+			for (j = 0; j < len; j++) {
+				if (isdigit(c[j])) {
+					appendbuffer(ab, "\x1b[31m", 5);
+					appendbuffer(ab, &c[j], 1);
+					appendbuffer(ab, "\x1b[39m", 5);
+				} else {
+					appendbuffer(ab, &c[j], 1);
+				}
+			}
+		//	appendbuffer(ab, &E.row[filerow].render[E.coloffset], len);
 		}
 		appendbuffer(ab, "\x1b[K", 3);
 		appendbuffer(ab, "\r\n", 2);
